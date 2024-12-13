@@ -91,7 +91,7 @@ jobs:
      - name: Crear instancia EC2
        run: |
         INSTANCE_ID=$(aws ec2 run-instances \
-            --image-id ami-088d38b423bff245f \ # Sustituye por un AMI válido
+            --image-id ami-088d38b423bff245f \
             --count 1 \
             --instance-type t2.micro \
             --key-name desafio_modulo5 \ 
