@@ -38,7 +38,7 @@ jobs:
           --count 1 \
           --instance-type t2.micro \
           --key-name desafio_modulo5 \
-          --security-group-ids ${{ env.SECURITY_GROUP_ID }} \
-          --subnet-id ${{ env.SUBNET_ID }} \
+          --security-group-ids ${{ vars.SECURITY_GROUP_ID }} \
+          --subnet-id ${{ vars.SUBNET_ID }} \
           --associate-public-ip-address \
           echo "Instancia creada"
