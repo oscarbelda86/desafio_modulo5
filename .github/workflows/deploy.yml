@@ -21,7 +21,7 @@ jobs:
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-         aws-region: us-east-2
+         aws-region: ${{ secrets.AWS_SECRET_REGION }}
 
 
   create-instance:
@@ -41,3 +41,4 @@ jobs:
           --security-group-ids ${{ vars.SECURITY_GROUP_ID }} \
           --subnet-id ${{ vars.SUBNET_ID }} \
           --associate-public-ip-address \
+          --region ${{ secrets.AWS_SECRET_REGION }}
