@@ -6,91 +6,34 @@ on:
      - main
 
 jobs:
-  create-ec2-instance:
+  aws-setup:
     runs-on: ubuntu-latest
+    outputs:
+      aws-configured: ${{ steps.configure-aws.outputs.aws-configured }}
 
     steps:
      - name: Checkout code
        uses: actions/checkout@v3
 
      - name: Configurar credenciales AWS
+       id: configure-aws
        uses: aws-actions/configure-aws-credentials@v2
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: us-east-2
 
-     - name: Crear VPC
-       run: |
-          VPC_ID=$(aws ec2 create-vpc \
-            --cidr-block 10.0.0.0/16 \
-            --query 'Vpc.VpcId' \
-            --output text)
-          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
 
-     - name: Crear subred pública
-       run: |
-          SUBNET_ID=$(aws ec2 create-subnet \
-            --vpc-id ${{ env.VPC_ID }} \
-            --cidr-block 10.0.1.0/24 \
-            --query 'Subnet.SubnetId' \
-            --output text)
-          echo "SUBNET_ID=$SUBNET_ID" >> $GITHUB_ENV
-
-     - name: Crear Internet Gateway y asociarla
-       run: |
-          IGW_ID=$(aws ec2 create-internet-gateway \
-            --query 'InternetGateway.InternetGatewayId' \
-            --output text)
-          echo "IGW_ID=$IGW_ID" >> $GITHUB_ENV
-  
-          aws ec2 attach-internet-gateway \
-            --vpc-id ${{ env.VPC_ID }} \
-            --internet-gateway-id $IGW_ID
-
-     - name: Crear tabla de enrutamiento y asociarla
-       run: |
-           ROUTE_TABLE_ID=$(aws ec2 create-route-table \
-              --vpc-id ${{ env.VPC_ID }} \
-              --query 'RouteTable.RouteTableId' \
-              --output text)
-           echo "ROUTE_TABLE_ID=$ROUTE_TABLE_ID" >> $GITHUB_ENV
-    
-           aws ec2 create-route \
-            --route-table-id $ROUTE_TABLE_ID \
-            --destination-cidr-block 0.0.0.0/0 \
-            --gateway-id ${{ env.IGW_ID }}
-    
-            aws ec2 associate-route-table \
-              --subnet-id ${{ env.SUBNET_ID }} \
-              --route-table-id $ROUTE_TABLE_ID
-    
-            aws ec2 modify-subnet-attribute \
-              --subnet-id ${{ env.SUBNET_ID }} \
-              --map-public-ip-on-launch
-
-
-     - name: Crear grupo de seguridad
-       run: |
-        SECURITY_GROUP_ID=$(aws ec2 create-security-group \
-          --group-name my-secure-sg \
-          --description "Grupo de seguridad para SSH seguro" \
-          --vpc-id ${{ env.VPC_ID }} \
-          --query 'GroupId' \
-          --output text)
-            echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" >> $GITHUB_ENV
-      
-                
-          
-            aws ec2 authorize-security-group-ingress \
-              --group-id $SECURITY_GROUP_ID \
-              --protocol tcp \
-              --port 22 \
-              --cidr 0.0.0.0/0
-
-     - name: Crear instancia EC2
-       run: |
-        INSTANCE_ID=$(aws ec2 run-instances \
+  create-instance:
+    runs-on: ubuntu-latest
+    needs: aws-setup
+    outputs:
+      instance-id: ${{ steps.create-ec2.outputs.instance-id }}
+    steps:
+      - name: Crear instancia EC2
+        id: create-ec2
+        run: |
+          aws ec2 run-instances \
           --image-id ami-088d38b423bff245f \
           --count 1 \
           --instance-type t2.micro \
@@ -98,19 +41,4 @@ jobs:
           --security-group-ids ${{ env.SECURITY_GROUP_ID }} \
           --subnet-id ${{ env.SUBNET_ID }} \
           --associate-public-ip-address \
-          --query 'Instances[0].InstanceId' \
-          --output text)
-        echo "Instancia creada"
-        echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
-
-     - name: Esperar a que la instancia esté en estado 'running'
-       run: |
-        aws ec2 wait instance-running --instance-ids ${{ env.INSTANCE_ID }}
-
-     - name: Crear AMI personalizada
-       run: |
-         AMI_ID=$(aws ec2 create-image \
-           --instance-id ${{ env.INSTANCE_ID }} \
-           --name "desafio-mod5" \
-           --description "Imagen ami de instancia creada en actions")
-         echo "Imagen personalizada creada"
+          echo "Instancia creada"
