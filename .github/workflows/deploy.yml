@@ -41,4 +41,3 @@ jobs:
           --security-group-ids ${{ vars.SECURITY_GROUP_ID }} \
           --subnet-id ${{ vars.SUBNET_ID }} \
           --associate-public-ip-address \
-          echo "Instancia creada"
